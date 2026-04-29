@@ -1,0 +1,27 @@
+# ──────────────────────────────────────────────
+# Docker Compose — Local Development
+# Start Firestore emulator + Redis for local dev
+# ──────────────────────────────────────────────
+version: '3.9'
+
+services:
+  firestore-emulator:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:latest
+    command: >
+      gcloud emulators firestore start
+      --host-port=0.0.0.0:8081
+      --project=snipli-local
+    ports:
+      - "8081:8081"
+    environment:
+      - FIRESTORE_EMULATOR_HOST=0.0.0.0:8081
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+volumes:
+  redis-data:

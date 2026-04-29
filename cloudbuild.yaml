@@ -1,0 +1,36 @@
+steps:
+  # Step 1: Run unit tests
+  - name: 'gradle:8-jdk21'
+    entrypoint: 'gradle'
+    args: ['test', '--no-daemon']
+
+  # Step 2: Build Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/snipli/api:$COMMIT_SHA'
+      - '.'
+
+  # Step 3: Push to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/snipli/api:$COMMIT_SHA'
+
+  # Step 4: Deploy to Cloud Run
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'snipli-api'
+      - '--image'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/snipli/api:$COMMIT_SHA'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+
+images:
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/snipli/api:$COMMIT_SHA'
