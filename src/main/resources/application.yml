@@ -1,0 +1,22 @@
+snipli:
+  base-url: ${SNIPLI_BASE_URL:https://snipli.io}
+  api-key: ${SNIPLI_API_KEY}
+  gcp:
+    project-id: ${GCP_PROJECT_ID}
+    cloud-tasks:
+      queue: snipli-click-queue
+      location: us-central1
+      handler-url: ${SNIPLI_TASKS_HANDLER_URL}
+
+spring:
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    default-property-inclusion: non_null
+
+server:
+  port: 8080
