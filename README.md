@@ -1,200 +1,158 @@
 # Snipli — Production-Grade URL Shortener & Link Infrastructure
 
-Snipli is a high-velocity, production-grade URL shortener and link infrastructure platform built with **Java 21 (Spring Boot 3)** and **Next.js (React / TypeScript / Tailwind CSS)**, designed for zero-credential dependency deployment on **Google Cloud Platform**.
+[![Live Website](https://img.shields.io/badge/Live%20Demo-snipli--url.vercel.app-blue?style=for-the-badge&logo=vercel)](https://snipli-url.vercel.app)
+[![API Status](https://img.shields.io/badge/Backend%20API-Render%20Live-success?style=for-the-badge&logo=render)](https://snipli-backend.onrender.com/actuator/health)
+[![Java](https://img.shields.io/badge/Java%2021-Spring%20Boot%203-orange?style=for-the-badge&logo=openjdk)](https://spring.io/projects/spring-boot)
+[![Next.js](https://img.shields.io/badge/Next.js%2016-TypeScript%20%2B%20Tailwind-black?style=for-the-badge&logo=next.js)](https://nextjs.org)
+[![Google Cloud](https://img.shields.io/badge/Google%20Cloud-Firestore%20Native-4285F4?style=for-the-badge&logo=googlecloud)](https://cloud.google.com/firestore)
+
+> **Snipli** is a modern, production-grade URL shortener and link infrastructure platform built with **Java 21 (Spring Boot 3)**, **Next.js (TypeScript / Tailwind CSS)**, **Google Cloud Firestore**, and **Upstash Redis**.
 
 ---
 
-## Architecture Overview
+## 🌐 Live Production Links
+
+- **Web Application**: [https://snipli-url.vercel.app](https://snipli-url.vercel.app)
+- **Backend API (Render)**: [https://snipli-backend.onrender.com](https://snipli-backend.onrender.com)
+- **API Health Check**: [https://snipli-backend.onrender.com/actuator/health](https://snipli-backend.onrender.com/actuator/health)
+
+---
+
+## 🚀 Key Features
+
+- **⚡ Sub-12ms Edge Redirects**: High-velocity redirection path resolves through Upstash Redis cache first before falling back to Firestore.
+- **🔐 Enterprise Authentication**: Secure BCrypt password hashing + HMAC-SHA512 JWT tokens with automatic session management.
+- **📊 Real-Time Telemetry & Analytics**: Live click charts, daily aggregated trends, and clean zero-state metric tracking.
+- **🛡️ Link Lifecycle & Expirations**: Custom aliases, custom expiration timestamps, and instant link editing/deletions.
+- **📱 Responsive Design & QR Codes**: Dynamic QR code generator, copy-to-clipboard badges, and mobile-responsive UI.
+- **🔄 Proactive Backend Warm-Up**: Automatic background pinging and resilient cold-start retry handling to wake free-tier services seamlessly.
+
+---
+
+## 🏛️ Architecture Overview
 
 ```text
                     ┌────────────────────────┐
-                    │       Next.js UI       │
-                    │   TypeScript + React   │
+                    │  Next.js 16 Web App    │
+                    │   (Vercel Edge CDN)    │
                     └───────────┬────────────┘
-                                │ HTTPS / API
+                                │ HTTPS / JWT
                                 ▼
                     ┌────────────────────────┐
                     │    Spring Boot API     │
-                    │   Java 21 (Cloud Run)  │
+                    │    Java 21 (Render)    │
                     └───────┬────────┬───────┘
                             │        │
                   hot path  │        │ source of truth
                             ▼        ▼
-                         Redis    Firestore
-                      (Memorystore)
-                            │
-                            │ async click task
-                            ▼
-                       Cloud Tasks
+                      Upstash Redis  Google Cloud Firestore
+                       (TLS Cache)     (Native Mode)
                             │
                             ▼
-                    Internal Analytics
+                    Sub-12ms 301 Redirect
 ```
-
-- **Redirect Hot Path (`GET /{code}`)**: Resolves through Redis first in sub-12ms, falling through to Firestore only on cache miss. Validates expiration and returns HTTP `301 Moved Permanently`.
-- **Durable Asynchronous Analytics**: Dispatches click events via Google Cloud Tasks without blocking the client redirect latency.
-- **Link Expiration & Custom Aliases**: Supports user-defined custom aliases and automatic expiration schedules with HTTP `410 Gone`.
-- **Light-Mode First UI**: Clean SaaS design with Google Stitch tokens, real-time telemetry charts (Recharts), QR code generation, searchable link management, and responsive layouts.
 
 ---
 
-## Tech Stack
+## 🛠️ Tech Stack
 
 | Layer | Technology |
 |---|---|
-| **Frontend** | Next.js (App Router), TypeScript, React, Tailwind CSS, Recharts, Lucide Icons |
-| **Backend** | Java 21, Spring Boot 3.x, Gradle Kotlin DSL, Spring Data Redis, Actuator |
+| **Frontend** | Next.js 16 (Turbopack, App Router), React 19, TypeScript, Tailwind CSS, Recharts, Lucide Icons |
+| **Backend** | Java 21, Spring Boot 3.4.1, Gradle Kotlin DSL, Spring Data Redis, Spring Security Crypto, JJWT |
 | **Database** | Google Cloud Firestore (Native Mode) |
-| **Cache** | Google Cloud Memorystore (Redis 7) / Redis |
-| **Queue** | Google Cloud Tasks |
-| **Compute** | Google Cloud Run |
-| **CI/CD** | Google Cloud Build & Google Artifact Registry |
+| **Cache** | Upstash Serverless Redis (TLS / Lettuce Connection Factory) |
+| **Hosting** | Vercel (Frontend Edge) & Render (Backend Docker Container) |
 | **Testing** | JUnit 5, Spring Boot Test, Mockito, Playwright E2E |
 
 ---
 
-## Repository Structure
+## 📂 Repository Structure
 
 ```text
-snipli/
+URL_shortener/
 ├── backend/                  # Spring Boot 3 + Java 21 REST API
-│   ├── src/                  # Main and test source code
+│   ├── src/                  # Controller, Service, Model, DTO, Config layers
 │   ├── build.gradle.kts      # Gradle Kotlin DSL build script
-│   ├── settings.gradle.kts   # Project configuration
 │   ├── gradlew / gradlew.bat # Gradle wrapper binaries
-│   └── Dockerfile            # Multi-stage production container build
-├── frontend/                 # Next.js App Router Web Application
-│   ├── src/                  # React components, pages, hooks, and lib
-│   ├── e2e/                  # Playwright end-to-end tests
-│   ├── public/               # Static assets & brand SVGs
-│   ├── package.json          # Dependencies & npm scripts
-│   └── Dockerfile            # Multi-stage production container build
-├── docker-compose.yml        # Local development infrastructure topology
-├── cloudbuild.yaml           # Google Cloud Build CI/CD pipeline
-├── .env.example              # Safe environment variable template
-├── project.md                # Product & technical specification
-├── design.md                 # Google Stitch visual design specification
-├── instructions.md           # Engineering execution guidelines
-└── README.md                 # Comprehensive project guide
+│   └── Dockerfile            # Production container build (Ubuntu Jammy + Temurin 21)
+├── frontend/                 # Next.js 16 App Router Web Application
+│   ├── src/                  # React components, dashboard, links, auth guard, api client
+│   ├── e2e/                  # Playwright end-to-end test suite
+│   ├── public/               # Brand SVGs and static assets
+│   ├── package.json          # Dependencies & build scripts
+│   └── Dockerfile            # Multi-stage standalone Next.js container
+├── docker-compose.yml        # Local development infrastructure setup
+└── README.md                 # Project documentation
 ```
 
 ---
 
-## API Contract
+## 🔌 API Reference
 
+### Authentication Endpoints
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| `POST` | `/api/v1/links` | `X-Api-Key` | Create a short link (`url`, optional `alias`, optional `expiresAt`) |
-| `GET` | `/api/v1/links` | `X-Api-Key` | Paginated search & status filtering (`search`, `status`, `page`, `size`) |
-| `GET` | `/api/v1/links/dashboard` | `X-Api-Key` | Dashboard aggregations, totals, recent links, and click telemetry |
-| `GET` | `/api/v1/links/{code}` | `X-Api-Key` | Get single short link metadata and status |
-| `GET` | `/api/v1/links/{code}/stats`| `X-Api-Key` | Get click counts and timestamps for a short code |
-| `DELETE`| `/api/v1/links/{code}` | `X-Api-Key` | Delete short link and evict from Redis cache |
-| `GET` | `/{code}` | Public | High-performance redirect (`301 Moved Permanently` / `410 Gone` / `404`) |
-| `POST` | `/internal/tasks/record-click` | Internal | Cloud Tasks worker for durable click recording |
-| `GET` | `/health` | Public | Lightweight health check |
+| `POST` | `/api/v1/auth/signup` | Public | Register a new user (`email`, `password`, `name`, optional `workspace`) |
+| `POST` | `/api/v1/auth/login` | Public | Authenticate user and receive JWT Bearer token |
+| `GET` | `/api/v1/auth/me` | Bearer JWT | Get current authenticated user profile |
+
+### Link Management & Analytics
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `POST` | `/api/v1/links` | Bearer JWT | Create short link (`originalUrl`, optional `alias`, optional `expiresAt`) |
+| `GET` | `/api/v1/links` | Bearer JWT | List and search links with pagination (`search`, `status`, `page`, `size`) |
+| `GET` | `/api/v1/links/dashboard` | Bearer JWT | Fetch user dashboard metrics and 7-day click traffic graph |
+| `GET` | `/api/v1/links/{code}` | Bearer JWT | Get specific short link details |
+| `GET` | `/api/v1/links/{code}/stats`| Bearer JWT | Fetch link click counts and activity timestamps |
+| `PUT` | `/api/v1/links/{code}` | Bearer JWT | Update destination URL or expiration date |
+| `DELETE`| `/api/v1/links/{code}` | Bearer JWT | Delete short link and evict from Redis cache |
+| `GET` | `/{code}` | Public | High-velocity 301 redirect / 410 gone |
+| `GET` | `/actuator/health` | Public | Health status check |
 
 ---
 
-## Local Development Setup
+## 💻 Local Development Setup
 
 ### 1. Prerequisites
-- **Java 21** (`java -version`)
+- **Java 21+** (`java -version`)
 - **Node.js 20+** & **npm** (`node -v`)
-- **Docker** & **Docker Compose** (for emulator & Redis)
 
-### 2. Start Local Infrastructure (Redis & Firestore Emulator)
-```bash
-docker-compose up -d firestore-emulator redis
-```
-This runs:
-- **Firestore emulator** on port `8081`
-- **Redis 7** on port `6379`
-
-### 3. Run Backend (Port 8080)
+### 2. Backend Setup
 ```bash
 cd backend
 
-# Point to local emulator (PowerShell)
-$env:FIRESTORE_EMULATOR_HOST="localhost:8081"
-$env:GCP_PROJECT_ID="snipli-local"
-$env:SNIPLI_API_KEY="snipli-dev-secret-key-12345"
-$env:SNIPLI_BASE_URL="http://localhost:8080"
-
-# Run Spring Boot
+# Create .env with your GCP project & Redis credentials
+# Run the Spring Boot application
 ./gradlew bootRun
 ```
+*Backend runs on `http://localhost:8080`.*
 
-### 4. Run Frontend (Port 3000)
+### 3. Frontend Setup
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-Open **`http://localhost:3000`** in your browser.
+*Frontend runs on `http://localhost:3000`.*
 
 ---
 
-## Running Tests
+## 🧪 Testing
 
-### Backend Unit & Integration Tests (JUnit 5 + Mockito)
+### Backend Unit & Integration Tests
 ```bash
 cd backend
 ./gradlew test
 ```
 
-### Frontend Typecheck & Build
+### Frontend Production Build & Typecheck
 ```bash
 cd frontend
 npm run build
 ```
 
-### Playwright End-to-End Tests
-```bash
-cd frontend
-npx playwright test
-```
-
 ---
 
-## Google Cloud Production Deployment
-
-Snipli is completely credential-independent and ready to deploy to any Google Cloud project.
-
-### 1. Enable Google Cloud APIs
-```bash
-gcloud services enable \
-  run.googleapis.com \
-  firestore.googleapis.com \
-  redis.googleapis.com \
-  cloudtasks.googleapis.com \
-  artifactregistry.googleapis.com \
-  cloudbuild.googleapis.com \
-  secretmanager.googleapis.com
-```
-
-### 2. Create Artifact Registry Repository
-```bash
-gcloud artifacts repositories create snipli \
-  --repository-format=docker \
-  --location=us-central1 \
-  --description="Snipli Docker images"
-```
-
-### 3. Store Production API Key in Secret Manager
-```bash
-echo -n "YOUR_SECURE_API_KEY" | gcloud secrets create snipli-api-key --data-file=-
-```
-
-### 4. Deploy via Cloud Build
-```bash
-gcloud builds submit --config=cloudbuild.yaml
-```
-
----
-
-## Security & Performance Highlights
-- **Least-Privilege Service Account**: Dedicated Cloud Run service account with `roles/datastore.user` and `roles/cloudtasks.enqueuer`.
-- **No Client Secrets**: Frontend never receives administrative tokens or backend private keys.
-- **Input Sanitization**: Strict scheme validation rejecting dangerous protocols (`javascript:`, `data:`, `file:`).
-- **Graceful Degradation**: If Redis is temporarily unreachable, requests fall back directly to Firestore without downtime.
+## 📄 License
+This project is open-source and available under the MIT License.
