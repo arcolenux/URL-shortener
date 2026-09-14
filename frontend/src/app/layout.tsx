@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
 import { AuthProvider } from "@/lib/auth-context";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -22,7 +21,7 @@ const jetBrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Snipli — High-Velocity Short Links & Real-Time Analytics",
   description:
-    "Production-grade URL shortener with sub-12ms edge redirects, durable Google Cloud Tasks telemetry, custom aliases, expiration schedules, and clean analytics.",
+    "Production-grade URL shortener with sub-12ms edge redirects, custom aliases, expiration schedules, and real-time analytics.",
   icons: {
     icon: "/snipli-icon.svg",
   },
@@ -42,7 +41,6 @@ export default function RootLayout({
         <AuthProvider>
           <Header />
           <main className="flex-1 w-full pt-16">{children}</main>
-          <Footer />
         </AuthProvider>
       </body>
     </html>
