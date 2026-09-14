@@ -287,19 +287,20 @@ export default function LinkDetailsView({ code }: LinkDetailsViewProps) {
       {/* Traffic Analytics Chart */}
       <TrafficChart
         data={[
-          { date: "Day 1", clicks: Math.round(link.totalClicks * 0.08) },
-          { date: "Day 2", clicks: Math.round(link.totalClicks * 0.12) },
-          { date: "Day 3", clicks: Math.round(link.totalClicks * 0.18) },
-          { date: "Day 4", clicks: Math.round(link.totalClicks * 0.15) },
-          { date: "Day 5", clicks: Math.round(link.totalClicks * 0.22) },
-          { date: "Day 6", clicks: Math.round(link.totalClicks * 0.1) },
-          { date: "Day 7", clicks: Math.round(link.totalClicks * 0.15) },
+          { date: "Day 1", clicks: 0 },
+          { date: "Day 2", clicks: 0 },
+          { date: "Day 3", clicks: 0 },
+          { date: "Day 4", clicks: 0 },
+          { date: "Day 5", clicks: 0 },
+          { date: "Day 6", clicks: 0 },
+          { date: "Day 7", clicks: link.totalClicks },
         ]}
         totalClicks={link.totalClicks}
       />
 
       {/* Device & Referral Breakdown */}
-      <DeviceBreakdown />
+      <DeviceBreakdown totalClicks={link.totalClicks} />
+
 
       {/* QR Code Modal */}
       <QrCodeModal

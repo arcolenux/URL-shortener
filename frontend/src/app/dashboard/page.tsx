@@ -152,7 +152,8 @@ function DashboardContent() {
           />
 
           {/* Device and Infrastructure Breakdown */}
-          <DeviceBreakdown />
+          <DeviceBreakdown totalClicks={dashboard.totalClicks} />
+
 
           {/* Recent Links Table */}
           <div className="pt-4">

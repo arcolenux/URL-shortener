@@ -29,9 +29,6 @@ export default function TrafficChart({ data, totalClicks }: TrafficChartProps) {
     { date: "Day 7", clicks: 0 },
   ];
 
-  const directClicks = Math.round(totalClicks * 0.68);
-  const referralClicks = totalClicks - directClicks;
-
   return (
     <div className="bg-surface-card rounded-2xl border border-border-subtle shadow-xs p-6 mb-8">
       {/* Chart Header */}
@@ -46,7 +43,7 @@ export default function TrafficChart({ data, totalClicks }: TrafficChartProps) {
             </span>
           </div>
           <p className="text-xs text-text-muted mt-0.5">
-            Aggregated requests processed by Google Cloud Tasks
+            Aggregated click traffic recorded in Google Cloud Firestore
           </p>
         </div>
 
@@ -55,17 +52,12 @@ export default function TrafficChart({ data, totalClicks }: TrafficChartProps) {
           <div className="flex items-center gap-1.5">
             <div className="w-2.5 h-2.5 rounded-full bg-primary-container"></div>
             <span className="text-text-muted">
-              Direct: <strong className="text-text-charcoal font-semibold">{directClicks.toLocaleString()}</strong>
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-full bg-indigo-500"></div>
-            <span className="text-text-muted">
-              Referral: <strong className="text-text-charcoal font-semibold">{referralClicks.toLocaleString()}</strong>
+              Total Clicks: <strong className="text-text-charcoal font-semibold">{totalClicks.toLocaleString()}</strong>
             </span>
           </div>
         </div>
       </div>
+
 
       {/* Chart Canvas */}
       <div className="h-64 sm:h-72 w-full pt-2">
