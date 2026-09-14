@@ -11,9 +11,27 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 class ApiClient {
   private token: string | null = null;
+  private hasWarmedUp = false;
 
   setAuthToken(token: string | null) {
     this.token = token;
+  }
+
+  /**
+   * Proactively ping backend to wake it from cold start (Render free tier)
+   */
+  async pingWarmup(): Promise<void> {
+    if (this.hasWarmedUp) return;
+    this.hasWarmedUp = true;
+    try {
+      await fetch(`${API_BASE}/actuator/health`, {
+        method: "GET",
+        mode: "cors",
+        cache: "no-store",
+      });
+    } catch {
+      // Background ping — fail silently
+    }
   }
 
   private getHeaders(): HeadersInit {
@@ -24,6 +42,23 @@ class ApiClient {
       headers["Authorization"] = `Bearer ${this.token}`;
     }
     return headers;
+  }
+
+  /**
+   * Resilient fetch with automatic cold-start retries (up to 2 retries if server is waking up)
+   */
+  private async fetchWithRetry(url: string, options: RequestInit, retries = 2): Promise<Response> {
+    try {
+      const res = await fetch(url, options);
+      return res;
+    } catch (err) {
+      if (retries > 0) {
+        // Wait 3 seconds and retry (allowing Render container time to boot)
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        return this.fetchWithRetry(url, options, retries - 1);
+      }
+      throw err;
+    }
   }
 
   private async handleResponse<T>(res: Response): Promise<T> {
@@ -40,8 +75,9 @@ class ApiClient {
     return res.json() as Promise<T>;
   }
 
+
   async signup(name: string, email: string, password: string, workspace?: string): Promise<any> {
-    const res = await fetch(`${API_BASE}/api/v1/auth/signup`, {
+    const res = await this.fetchWithRetry(`${API_BASE}/api/v1/auth/signup`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, email, password, workspace }),
@@ -50,7 +86,7 @@ class ApiClient {
   }
 
   async login(email: string, password: string): Promise<any> {
-    const res = await fetch(`${API_BASE}/api/v1/auth/login`, {
+    const res = await this.fetchWithRetry(`${API_BASE}/api/v1/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
@@ -59,7 +95,7 @@ class ApiClient {
   }
 
   async getMe(): Promise<any> {
-    const res = await fetch(`${API_BASE}/api/v1/auth/me`, {
+    const res = await this.fetchWithRetry(`${API_BASE}/api/v1/auth/me`, {
       method: "GET",
       headers: this.getHeaders(),
     });
@@ -67,7 +103,7 @@ class ApiClient {
   }
 
   async createLink(request: CreateLinkRequest): Promise<CreateLinkResponse> {
-    const res = await fetch(`${API_BASE}/api/v1/links`, {
+    const res = await this.fetchWithRetry(`${API_BASE}/api/v1/links`, {
       method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify(request),
@@ -87,7 +123,7 @@ class ApiClient {
     params.append("page", page.toString());
     params.append("size", size.toString());
 
-    const res = await fetch(`${API_BASE}/api/v1/links?${params.toString()}`, {
+    const res = await this.fetchWithRetry(`${API_BASE}/api/v1/links?${params.toString()}`, {
       method: "GET",
       headers: this.getHeaders(),
       cache: "no-store",
@@ -96,7 +132,7 @@ class ApiClient {
   }
 
   async getDashboard(): Promise<DashboardResponse> {
-    const res = await fetch(`${API_BASE}/api/v1/links/dashboard`, {
+    const res = await this.fetchWithRetry(`${API_BASE}/api/v1/links/dashboard`, {
       method: "GET",
       headers: this.getHeaders(),
       cache: "no-store",
@@ -105,7 +141,7 @@ class ApiClient {
   }
 
   async getLink(code: string): Promise<Link> {
-    const res = await fetch(`${API_BASE}/api/v1/links/${encodeURIComponent(code)}`, {
+    const res = await this.fetchWithRetry(`${API_BASE}/api/v1/links/${encodeURIComponent(code)}`, {
       method: "GET",
       headers: this.getHeaders(),
       cache: "no-store",
@@ -114,7 +150,7 @@ class ApiClient {
   }
 
   async getStats(code: string): Promise<LinkStatsResponse> {
-    const res = await fetch(`${API_BASE}/api/v1/links/${encodeURIComponent(code)}/stats`, {
+    const res = await this.fetchWithRetry(`${API_BASE}/api/v1/links/${encodeURIComponent(code)}/stats`, {
       method: "GET",
       headers: this.getHeaders(),
       cache: "no-store",
@@ -123,7 +159,7 @@ class ApiClient {
   }
 
   async updateLink(code: string, url: string, expiresAt?: string | null): Promise<Link> {
-    const res = await fetch(`${API_BASE}/api/v1/links/${encodeURIComponent(code)}`, {
+    const res = await this.fetchWithRetry(`${API_BASE}/api/v1/links/${encodeURIComponent(code)}`, {
       method: "PUT",
       headers: this.getHeaders(),
       body: JSON.stringify({ url, expiresAt }),
@@ -132,7 +168,7 @@ class ApiClient {
   }
 
   async deleteLink(code: string): Promise<void> {
-    const res = await fetch(`${API_BASE}/api/v1/links/${encodeURIComponent(code)}`, {
+    const res = await this.fetchWithRetry(`${API_BASE}/api/v1/links/${encodeURIComponent(code)}`, {
       method: "DELETE",
       headers: this.getHeaders(),
     });
@@ -141,6 +177,7 @@ class ApiClient {
       throw new Error(errorData.message || `HTTP ${res.status}`);
     }
   }
+
 }
 
 export const api = new ApiClient();

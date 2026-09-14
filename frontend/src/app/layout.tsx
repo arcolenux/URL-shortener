@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/layout/Header";
 import { AuthProvider } from "@/lib/auth-context";
+import BackendWarmup from "@/components/common/BackendWarmup";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -39,6 +40,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col font-sans bg-canvas-bg text-text-charcoal selection:bg-blue-100 selection:text-blue-900">
         <AuthProvider>
+          <BackendWarmup />
           <Header />
           <main className="flex-1 w-full pt-16">{children}</main>
         </AuthProvider>
@@ -46,3 +48,4 @@ export default function RootLayout({
     </html>
   );
 }
+
