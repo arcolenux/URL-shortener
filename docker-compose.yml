@@ -1,6 +1,6 @@
 # ──────────────────────────────────────────────
-# Docker Compose — Local Development
-# Start Firestore emulator + Redis for local dev
+# Docker Compose — Local Development Topology
+# Starts Firestore emulator, Redis, Backend & Frontend
 # ──────────────────────────────────────────────
 version: '3.9'
 
@@ -22,6 +22,36 @@ services:
       - "6379:6379"
     volumes:
       - redis-data:/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - FIRESTORE_EMULATOR_HOST=firestore-emulator:8081
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - GCP_PROJECT_ID=snipli-local
+      - SNIPLI_API_KEY=snipli-dev-secret-key-12345
+      - SNIPLI_BASE_URL=http://localhost:8080
+      - SNIPLI_TASKS_HANDLER_URL=http://backend:8080/internal/tasks/record-click
+    depends_on:
+      - firestore-emulator
+      - redis
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8080
+      - NEXT_PUBLIC_API_KEY=snipli-dev-secret-key-12345
+    depends_on:
+      - backend
 
 volumes:
   redis-data:

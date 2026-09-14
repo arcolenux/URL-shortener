@@ -61,3 +61,10 @@ logs/
 # Docker (local data volumes)
 # ──────────────────────────────────────────────
 docker-data/
+
+# ──────────────────────────────────────────────
+# Markdown documents (only README.md is published)
+# ──────────────────────────────────────────────
+*.md
+!README.md
+
