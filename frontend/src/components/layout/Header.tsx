@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 import {
   Plus,
@@ -17,17 +17,19 @@ import {
   User,
   Building,
   ChevronDown,
-  LogIn,
 } from "lucide-react";
 import CreateLinkModal from "../modals/CreateLinkModal";
-import NotificationsDropdown from "./NotificationsDropdown";
+import NotificationsDropdown, { useNotifications } from "./NotificationsDropdown";
 import AccountSettingsModal from "../modals/AccountSettingsModal";
 import AuthModal from "../modals/AuthModal";
 import { useAuth } from "@/lib/auth-context";
 
 export default function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, isAuthenticated, logout, updateUser } = useAuth();
+  const { notifications } = useNotifications();
+  const unreadCount = notifications.filter((n) => !n.read).length;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
@@ -108,7 +110,9 @@ export default function Header() {
                 className="p-2 text-text-muted hover:text-text-charcoal hover:bg-canvas-bg rounded-lg transition-colors relative flex items-center justify-center"
               >
                 <Bell className="w-4 h-4" />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-primary-container rounded-full ring-2 ring-surface-card"></span>
+                {unreadCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary-container rounded-full ring-2 ring-surface-card" />
+                )}
               </button>
 
               <NotificationsDropdown
@@ -189,6 +193,7 @@ export default function Header() {
                           onClick={() => {
                             logout();
                             setProfileDropdownOpen(false);
+                            router.push("/");
                           }}
                           className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-danger-crimson hover:bg-red-50 rounded-lg transition-colors text-left"
                         >

@@ -24,36 +24,28 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const DEFAULT_DEMO_USER: AuthUser = {
-  id: "usr_alex_rivera",
-  name: "Alex Rivera",
-  email: "alex@snipli.io",
-  workspace: "Pro Workspace",
-  apiKey: "snip_live_99d19fc8e72ba184c8f2a084",
-};
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(DEFAULT_DEMO_USER);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Initialize token and user from localStorage
+    // Restore session from localStorage only — never inject a demo user
     try {
       const storedToken = localStorage.getItem("snipli_jwt_token");
       const storedUser = localStorage.getItem("snipli_user");
 
       if (storedToken && storedUser) {
+        const parsed: AuthUser = JSON.parse(storedUser);
         setToken(storedToken);
-        setUser(JSON.parse(storedUser));
+        setUser(parsed);
         api.setAuthToken(storedToken);
-      } else if (!storedUser) {
-        // Set default demo user for frictionless immediate experience
-        setUser(DEFAULT_DEMO_USER);
-        localStorage.setItem("snipli_user", JSON.stringify(DEFAULT_DEMO_USER));
       }
+      // If nothing is stored → user is null (not authenticated)
     } catch {
-      setUser(DEFAULT_DEMO_USER);
+      // Corrupted storage — treat as unauthenticated
+      localStorage.removeItem("snipli_jwt_token");
+      localStorage.removeItem("snipli_user");
     } finally {
       setIsLoading(false);
     }
@@ -71,16 +63,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: true };
       }
       return { success: false, error: "Invalid response from authentication server" };
-    } catch (err: any) {
-      // Local fallback login for offline/demo environments
+    } catch {
+      // Offline / backend not reachable — create a local session so the app
+      // can be demonstrated without a running backend.
       const demoUser: AuthUser = {
         id: "usr_" + Math.random().toString(36).substring(2, 10),
-        name: email.split("@")[0].replace(".", " ").replace(/^./, (str) => str.toUpperCase()),
+        name: email.split("@")[0].replace(".", " ").replace(/^./, (s) => s.toUpperCase()),
         email,
-        workspace: "Pro Workspace",
+        workspace: email.split("@")[0] + "'s Workspace",
         apiKey: "snip_live_" + Math.random().toString(36).substring(2, 15),
       };
-      const mockToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." + btoa(JSON.stringify({ sub: email, userId: demoUser.id }));
+      const mockToken =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+        btoa(JSON.stringify({ sub: email, userId: demoUser.id }));
       setToken(mockToken);
       setUser(demoUser);
       localStorage.setItem("snipli_jwt_token", mockToken);
@@ -102,8 +97,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: true };
       }
       return { success: false, error: "Invalid registration response" };
-    } catch (err: any) {
-      // Local fallback register
+    } catch {
+      // Offline fallback
       const newUser: AuthUser = {
         id: "usr_" + Math.random().toString(36).substring(2, 10),
         name,
@@ -111,7 +106,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         workspace: workspace || name + "'s Workspace",
         apiKey: "snip_live_" + Math.random().toString(36).substring(2, 15),
       };
-      const mockToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." + btoa(JSON.stringify({ sub: email, userId: newUser.id }));
+      const mockToken =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+        btoa(JSON.stringify({ sub: email, userId: newUser.id }));
       setToken(mockToken);
       setUser(newUser);
       localStorage.setItem("snipli_jwt_token", mockToken);

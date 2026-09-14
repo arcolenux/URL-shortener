@@ -16,7 +16,7 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   {
     id: "notif-1",
     title: "Traffic Spike Alert",
-    message: "Link /guava-repo reached 1,420 total clicks (+45% today).",
+    message: "Your most recent link reached 1,420 total clicks (+45% today).",
     time: "10m ago",
     type: "trend",
     read: false,
@@ -24,7 +24,7 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   {
     id: "notif-2",
     title: "Expiration Warning",
-    message: "Link /cloud-run is set to expire on Sep 17, 2026.",
+    message: "One of your links is set to expire in 3 days.",
     time: "2h ago",
     type: "warning",
     read: false,
@@ -47,25 +47,50 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   },
 ];
 
+// Singleton store so Header badge and dropdown share the same state
+let _globalNotifications: NotificationItem[] = [...INITIAL_NOTIFICATIONS];
+const _listeners: Array<(n: NotificationItem[]) => void> = [];
+
+function subscribeNotifications(cb: (n: NotificationItem[]) => void) {
+  _listeners.push(cb);
+  return () => {
+    const idx = _listeners.indexOf(cb);
+    if (idx >= 0) _listeners.splice(idx, 1);
+  };
+}
+
+function updateNotifications(next: NotificationItem[]) {
+  _globalNotifications = next;
+  _listeners.forEach((cb) => cb(next));
+}
+
+export function useNotifications() {
+  const [notifications, setNotifications] = useState<NotificationItem[]>(_globalNotifications);
+
+  React.useEffect(() => {
+    setNotifications(_globalNotifications);
+    return subscribeNotifications(setNotifications);
+  }, []);
+
+  const markAllAsRead = () => updateNotifications(notifications.map((n) => ({ ...n, read: true })));
+  const clearAll = () => updateNotifications([]);
+  const markOneAsRead = (id: string) =>
+    updateNotifications(notifications.map((n) => (n.id === id ? { ...n, read: true } : n)));
+
+  return { notifications, markAllAsRead, clearAll, markOneAsRead };
+}
+
 interface NotificationsDropdownProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
 export default function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdownProps) {
-  const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
+  const { notifications, markAllAsRead, clearAll, markOneAsRead } = useNotifications();
 
   if (!isOpen) return null;
 
   const unreadCount = notifications.filter((n) => !n.read).length;
-
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-  };
-
-  const clearAll = () => {
-    setNotifications([]);
-  };
 
   const getIcon = (type: NotificationItem["type"]) => {
     switch (type) {
@@ -138,11 +163,7 @@ export default function NotificationsDropdown({ isOpen, onClose }: Notifications
             notifications.map((n) => (
               <div
                 key={n.id}
-                onClick={() => {
-                  setNotifications((prev) =>
-                    prev.map((item) => (item.id === n.id ? { ...item, read: true } : item))
-                  );
-                }}
+                onClick={() => markOneAsRead(n.id)}
                 className={`p-3.5 flex items-start gap-3 transition-colors cursor-pointer ${
                   !n.read ? "bg-blue-50/40 hover:bg-blue-50/70" : "hover:bg-slate-50"
                 }`}
@@ -182,7 +203,7 @@ export default function NotificationsDropdown({ isOpen, onClose }: Notifications
               className="text-text-muted hover:text-danger-crimson flex items-center gap-1 transition-colors text-[11px] font-medium"
             >
               <Trash2 className="w-3 h-3" />
-              <span>Clear</span>
+              <span>Clear all</span>
             </button>
           </div>
         )}

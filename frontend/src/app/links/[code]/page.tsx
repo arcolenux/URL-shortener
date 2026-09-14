@@ -1,5 +1,6 @@
 import React from "react";
 import LinkDetailsView from "@/components/links/LinkDetailsView";
+import AuthGuard from "@/components/auth/AuthGuard";
 
 interface PageProps {
   params: Promise<{
@@ -9,5 +10,9 @@ interface PageProps {
 
 export default async function LinkDetailsPage({ params }: PageProps) {
   const { code } = await params;
-  return <LinkDetailsView code={code} />;
+  return (
+    <AuthGuard>
+      <LinkDetailsView code={code} />
+    </AuthGuard>
+  );
 }

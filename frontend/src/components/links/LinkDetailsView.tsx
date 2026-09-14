@@ -22,6 +22,7 @@ import { formatDate, formatDateTime, formatNumber, formatRelativeTime } from "@/
 import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
 import QrCodeModal from "@/components/modals/QrCodeModal";
+import DeleteConfirmationModal from "@/components/modals/DeleteConfirmationModal";
 import TrafficChart from "@/components/dashboard/TrafficChart";
 import DeviceBreakdown from "@/components/dashboard/DeviceBreakdown";
 
@@ -36,6 +37,8 @@ export default function LinkDetailsView({ code }: LinkDetailsViewProps) {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editUrl, setEditUrl] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
@@ -83,13 +86,16 @@ export default function LinkDetailsView({ code }: LinkDetailsViewProps) {
     }
   };
 
-  const handleDelete = async () => {
-    if (!confirm(`Are you sure you want to delete /${code}?`)) return;
+  const handleConfirmDelete = async () => {
+    setDeleting(true);
     try {
       await api.deleteLink(code);
+      setDeleteOpen(false);
       router.push("/links");
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : "Failed to delete link");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -221,7 +227,7 @@ export default function LinkDetailsView({ code }: LinkDetailsViewProps) {
               </a>
 
               <button
-                onClick={handleDelete}
+                onClick={() => setDeleteOpen(true)}
                 className="p-2 text-text-muted hover:text-danger-rose rounded-lg hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-colors"
                 title="Delete Link"
               >
@@ -301,6 +307,15 @@ export default function LinkDetailsView({ code }: LinkDetailsViewProps) {
         onClose={() => setQrOpen(false)}
         shortUrl={link.shortUrl}
         shortCode={link.shortCode}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={handleConfirmDelete}
+        shortCode={code}
+        loading={deleting}
       />
 
       {/* Edit URL Modal */}

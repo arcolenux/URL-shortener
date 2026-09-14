@@ -11,8 +11,9 @@ import DeviceBreakdown from "@/components/dashboard/DeviceBreakdown";
 import LinksTable from "@/components/links/LinksTable";
 import { Skeleton } from "@/components/ui/Skeleton";
 import CreateLinkModal from "@/components/modals/CreateLinkModal";
+import AuthGuard from "@/components/auth/AuthGuard";
 
-export default function DashboardPage() {
+function DashboardContent() {
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -187,5 +188,13 @@ export default function DashboardPage() {
         }}
       />
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <AuthGuard>
+      <DashboardContent />
+    </AuthGuard>
   );
 }

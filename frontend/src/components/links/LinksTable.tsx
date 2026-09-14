@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
 import QrCodeModal from "../modals/QrCodeModal";
 import CreateLinkModal from "../modals/CreateLinkModal";
+import DeleteConfirmationModal from "../modals/DeleteConfirmationModal";
 
 interface LinksTableProps {
   initialLinks?: LinkType[];
@@ -42,6 +43,8 @@ export default function LinksTable({
   const [statusFilter, setStatusFilter] = useState("all");
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [qrModalLink, setQrModalLink] = useState<{ url: string; code: string } | null>(null);
+  const [deleteModalCode, setDeleteModalCode] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -75,13 +78,17 @@ export default function LinksTable({
     } catch {}
   };
 
-  const handleDelete = async (code: string) => {
-    if (!confirm(`Are you sure you want to delete short link /${code}?`)) return;
+  const handleConfirmDelete = async () => {
+    if (!deleteModalCode) return;
+    setDeleting(true);
     try {
-      await api.deleteLink(code);
+      await api.deleteLink(deleteModalCode);
+      setDeleteModalCode(null);
       fetchLinks();
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : "Failed to delete link");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -316,7 +323,7 @@ export default function LinksTable({
                           </Link>
 
                           <button
-                            onClick={() => handleDelete(link.shortCode)}
+                            onClick={() => setDeleteModalCode(link.shortCode)}
                             title="Delete Link"
                             className="p-1.5 text-text-muted hover:text-danger-rose rounded-md hover:bg-rose-50 transition-colors"
                           >
@@ -370,6 +377,15 @@ export default function LinksTable({
           shortCode={qrModalLink.code}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={!!deleteModalCode}
+        onClose={() => setDeleteModalCode(null)}
+        onConfirm={handleConfirmDelete}
+        shortCode={deleteModalCode || ""}
+        loading={deleting}
+      />
 
       {/* Create Link Modal */}
       <CreateLinkModal
