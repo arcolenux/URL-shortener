@@ -51,25 +51,11 @@ public class SecurityFilter extends OncePerRequestFilter {
         }
 
         // 3. Extract and validate JWT Token if present
-        boolean hasValidJwt = extractAndAttachUser(request);
-
-        // 4. Check API Key fallback
-        String apiKey = request.getHeader("X-Api-Key");
-        String configuredApiKey = properties.getApiKey();
-        boolean hasValidApiKey = (configuredApiKey != null && !configuredApiKey.isBlank() && configuredApiKey.equals(apiKey));
-
-        // If neither JWT nor valid API Key is provided when configured, enforce authentication on protected endpoints
-        if (configuredApiKey != null && !configuredApiKey.isBlank() && !hasValidApiKey && !hasValidJwt) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json");
-            response.getWriter().write("""
-                    {"error":"UNAUTHORIZED","message":"Missing or invalid JWT token or API key","timestamp":"%s"}
-                    """.formatted(Instant.now().toString()));
-            return;
-        }
+        extractAndAttachUser(request);
 
         filterChain.doFilter(request, response);
     }
+
 
     private boolean extractAndAttachUser(HttpServletRequest request) {
         String authHeader = request.getHeader("Authorization");

@@ -1,6 +1,5 @@
 snipli:
   base-url: ${SNIPLI_BASE_URL:http://localhost:8080}
-  api-key: ${SNIPLI_API_KEY:}
   gcp:
     project-id: ${GCP_PROJECT_ID:}
     credentials-path: ${GCP_CREDENTIALS_PATH:}

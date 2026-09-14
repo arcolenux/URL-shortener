@@ -8,7 +8,6 @@ import org.springframework.stereotype.Component;
 public class SnipliProperties {
 
     private String baseUrl;
-    private String apiKey;
     private Jwt jwt = new Jwt();
     private Gcp gcp = new Gcp();
 
@@ -20,13 +19,6 @@ public class SnipliProperties {
         this.baseUrl = baseUrl;
     }
 
-    public String getApiKey() {
-        return apiKey;
-    }
-
-    public void setApiKey(String apiKey) {
-        this.apiKey = apiKey;
-    }
 
     public Jwt getJwt() {
         return jwt;
