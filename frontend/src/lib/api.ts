@@ -10,7 +10,7 @@ import {
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 const API_KEY = process.env.NEXT_PUBLIC_API_KEY || "snipli-dev-secret-key-12345";
 
-// In-memory/local storage fallback for client preview / testing
+// In-memory fallback store for preview mode
 const localStore: Link[] = [
   {
     shortCode: "guava-repo",
@@ -45,11 +45,19 @@ const localStore: Link[] = [
 ];
 
 class ApiClient {
+  private token: string | null = null;
+
+  setAuthToken(token: string | null) {
+    this.token = token;
+  }
+
   private getHeaders(): HeadersInit {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
-    if (API_KEY) {
+    if (this.token) {
+      headers["Authorization"] = `Bearer ${this.token}`;
+    } else if (API_KEY) {
       headers["X-Api-Key"] = API_KEY;
     }
     return headers;
@@ -67,6 +75,32 @@ class ApiClient {
       throw new Error(errorMessage);
     }
     return res.json() as Promise<T>;
+  }
+
+  async signup(name: string, email: string, password: string, workspace?: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/api/v1/auth/signup`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, password, workspace }),
+    });
+    return await this.handleResponse(res);
+  }
+
+  async login(email: string, password: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/api/v1/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    return await this.handleResponse(res);
+  }
+
+  async getMe(): Promise<any> {
+    const res = await fetch(`${API_BASE}/api/v1/auth/me`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return await this.handleResponse(res);
   }
 
   async createLink(request: CreateLinkRequest): Promise<CreateLinkResponse> {
@@ -121,7 +155,6 @@ class ApiClient {
       });
       return await this.handleResponse<PaginatedLinksResponse>(res);
     } catch {
-      // Local fallback
       let filtered = [...localStore];
       if (search && search.trim()) {
         const s = search.trim().toLowerCase();
@@ -156,7 +189,6 @@ class ApiClient {
       });
       return await this.handleResponse<DashboardResponse>(res);
     } catch {
-      // Local fallback
       const totalLinks = localStore.length;
       const totalClicks = localStore.reduce((sum, l) => sum + l.totalClicks, 0);
       const activeLinks = localStore.filter((l) => l.status === "ACTIVE").length;
@@ -224,6 +256,25 @@ class ApiClient {
         expiresAt: null,
         lastClickedAt: new Date().toISOString(),
       };
+    }
+  }
+
+  async updateLink(code: string, url: string, expiresAt?: string | null): Promise<Link> {
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/links/${encodeURIComponent(code)}`, {
+        method: "PUT",
+        headers: this.getHeaders(),
+        body: JSON.stringify({ url, expiresAt }),
+      });
+      return await this.handleResponse<Link>(res);
+    } catch {
+      const found = localStore.find((l) => l.shortCode === code);
+      if (found) {
+        found.originalUrl = url;
+        if (expiresAt !== undefined) found.expiresAt = expiresAt;
+        return found;
+      }
+      throw new Error("Link not found");
     }
   }
 

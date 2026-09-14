@@ -71,4 +71,17 @@ test.describe("Snipli URL Shortener User Flow", () => {
     await closeBtn.click();
     await expect(page.locator("h3:has-text('Create a Short Link')")).not.toBeVisible();
   });
+
+  test("renders login and signup pages and handles authentication form", async ({ page }) => {
+    // Test login page
+    await page.goto("/login");
+    await expect(page.locator("h1")).toContainText("Welcome back");
+    await expect(page.locator('input[type="email"]')).toBeVisible();
+    await expect(page.locator('input[type="password"]')).toBeVisible();
+
+    // Test signup page
+    await page.goto("/signup");
+    await expect(page.locator("h1")).toContainText("Create your workspace");
+    await expect(page.locator('input[placeholder*="Alex Rivera"]')).toBeVisible();
+  });
 });

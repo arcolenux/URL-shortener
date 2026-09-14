@@ -36,6 +36,9 @@ export default function LinkDetailsView({ code }: LinkDetailsViewProps) {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editUrl, setEditUrl] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const fetchLink = useCallback(async () => {
     setLoading(true);
@@ -43,6 +46,7 @@ export default function LinkDetailsView({ code }: LinkDetailsViewProps) {
     try {
       const data = await api.getLink(code);
       setLink(data);
+      setEditUrl(data.originalUrl);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to load link details";
       setError(msg);
@@ -62,6 +66,21 @@ export default function LinkDetailsView({ code }: LinkDetailsViewProps) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {}
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!link) return;
+    setSavingEdit(true);
+    try {
+      const updated = await api.updateLink(code, editUrl);
+      setLink(updated);
+      setEditOpen(false);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to update link destination URL");
+    } finally {
+      setSavingEdit(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -166,42 +185,49 @@ export default function LinkDetailsView({ code }: LinkDetailsViewProps) {
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={handleCopy}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary-container hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all active:scale-[0.98]"
-            >
-              {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copied ? "Copied Link!" : "Copy Short URL"}</span>
-            </button>
+            {/* Action Buttons */}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={handleCopy}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary-container hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all active:scale-[0.98]"
+              >
+                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copied ? "Copied Link!" : "Copy Short URL"}</span>
+              </button>
 
-            <button
-              onClick={() => setQrOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-surface-card hover:bg-slate-100 border border-border-subtle text-text-charcoal text-xs font-semibold rounded-lg shadow-2xs transition-colors"
-            >
-              <QrCode className="w-3.5 h-3.5 text-text-muted" />
-              <span>QR Code</span>
-            </button>
+              <button
+                onClick={() => setEditOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-surface-card hover:bg-slate-100 border border-border-subtle text-text-charcoal text-xs font-semibold rounded-lg shadow-2xs transition-colors"
+              >
+                <span>Edit URL</span>
+              </button>
 
-            <a
-              href={link.shortUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-surface-card hover:bg-slate-100 border border-border-subtle text-text-charcoal text-xs font-semibold rounded-lg shadow-2xs transition-colors"
-            >
-              <Share2 className="w-3.5 h-3.5 text-text-muted" />
-              <span>Test Redirect</span>
-            </a>
+              <button
+                onClick={() => setQrOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-surface-card hover:bg-slate-100 border border-border-subtle text-text-charcoal text-xs font-semibold rounded-lg shadow-2xs transition-colors"
+              >
+                <QrCode className="w-3.5 h-3.5 text-text-muted" />
+                <span>QR Code</span>
+              </button>
 
-            <button
-              onClick={handleDelete}
-              className="p-2 text-text-muted hover:text-danger-rose rounded-lg hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-colors"
-              title="Delete Link"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
+              <a
+                href={link.shortUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-surface-card hover:bg-slate-100 border border-border-subtle text-text-charcoal text-xs font-semibold rounded-lg shadow-2xs transition-colors"
+              >
+                <Share2 className="w-3.5 h-3.5 text-text-muted" />
+                <span>Test Redirect</span>
+              </a>
+
+              <button
+                onClick={handleDelete}
+                className="p-2 text-text-muted hover:text-danger-rose rounded-lg hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-colors"
+                title="Delete Link"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
         </div>
 
         {/* Metric Cards Row */}
@@ -276,6 +302,49 @@ export default function LinkDetailsView({ code }: LinkDetailsViewProps) {
         shortUrl={link.shortUrl}
         shortCode={link.shortCode}
       />
+
+      {/* Edit URL Modal */}
+      {editOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fade-in">
+          <div className="bg-surface-card rounded-2xl max-w-md w-full p-6 shadow-2xl border border-border-subtle animate-fade-in">
+            <h3 className="text-base font-bold text-text-charcoal mb-1">Edit Destination URL</h3>
+            <p className="text-xs text-text-muted mb-4 font-mono">/{code}</p>
+
+            <form onSubmit={handleSaveEdit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-text-charcoal mb-1.5">
+                  Destination URL
+                </label>
+                <input
+                  type="url"
+                  required
+                  value={editUrl}
+                  onChange={(e) => setEditUrl(e.target.value)}
+                  placeholder="https://example.com/new-destination"
+                  className="w-full px-3.5 py-2.5 text-sm bg-canvas-bg border border-border-subtle rounded-xl text-text-charcoal font-mono focus:outline-hidden focus:ring-2 focus:ring-blue-500/30"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditOpen(false)}
+                  className="px-4 py-2 bg-surface-card hover:bg-slate-100 border border-border-subtle text-text-charcoal text-xs font-semibold rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEdit}
+                  className="px-4 py-2 bg-primary-container hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-sm transition-all disabled:opacity-50"
+                >
+                  {savingEdit ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

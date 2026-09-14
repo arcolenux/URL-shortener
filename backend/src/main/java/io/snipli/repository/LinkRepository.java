@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
@@ -17,6 +18,8 @@ public class LinkRepository {
 
     private static final String COLLECTION = "links";
     private final Firestore firestore;
+    // In-memory cache/fallback store
+    private final Map<String, Link> memoryStore = new ConcurrentHashMap<>();
 
     public LinkRepository(Firestore firestore) {
         this.firestore = firestore;
@@ -26,6 +29,10 @@ public class LinkRepository {
      * Check whether a document with the given shortCode already exists.
      */
     public boolean exists(String shortCode) {
+        if (memoryStore.containsKey(shortCode)) {
+            return true;
+        }
+        if (firestore == null) return false;
         try {
             DocumentSnapshot snapshot = firestore.collection(COLLECTION).document(shortCode).get().get();
             return snapshot.exists();
@@ -41,10 +48,16 @@ public class LinkRepository {
      * Save a new Link document to Firestore.
      */
     public void save(Link link) {
+        memoryStore.put(link.shortCode(), link);
+        if (firestore == null) return;
+
         Map<String, Object> data = new HashMap<>();
         data.put("shortCode", link.shortCode());
         data.put("originalUrl", link.originalUrl());
         data.put("totalClicks", link.totalClicks());
+        if (link.userId() != null) {
+            data.put("userId", link.userId());
+        }
         data.put("createdAt", Timestamp.ofTimeSecondsAndNanos(
                 link.createdAt().getEpochSecond(), link.createdAt().getNano()));
         if (link.expiresAt() != null) {
@@ -70,12 +83,19 @@ public class LinkRepository {
      * Fetch a Link by its shortCode.
      */
     public Optional<Link> findByShortCode(String shortCode) {
+        if (memoryStore.containsKey(shortCode)) {
+            return Optional.of(memoryStore.get(shortCode));
+        }
+        if (firestore == null) return Optional.empty();
+
         try {
             DocumentSnapshot doc = firestore.collection(COLLECTION).document(shortCode).get().get();
             if (!doc.exists()) {
                 return Optional.empty();
             }
-            return Optional.of(toLink(doc));
+            Link link = toLink(doc);
+            memoryStore.put(shortCode, link);
+            return Optional.of(link);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException("Interrupted while fetching link", e);
@@ -88,20 +108,60 @@ public class LinkRepository {
      * Fetch all links from Firestore.
      */
     public List<Link> findAll() {
+        if (firestore == null) {
+            return new ArrayList<>(memoryStore.values());
+        }
+
         try {
             QuerySnapshot snapshot = firestore.collection(COLLECTION)
                     .orderBy("createdAt", Query.Direction.DESCENDING)
                     .get()
                     .get();
 
-            return snapshot.getDocuments().stream()
+            List<Link> list = snapshot.getDocuments().stream()
                     .map(this::toLink)
                     .collect(Collectors.toList());
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException("Interrupted while fetching all links", e);
-        } catch (ExecutionException e) {
-            throw new RuntimeException("Failed to fetch all links", e);
+
+            list.forEach(l -> memoryStore.put(l.shortCode(), l));
+            return list;
+        } catch (Exception e) {
+            return new ArrayList<>(memoryStore.values());
+        }
+    }
+
+    /**
+     * Fetch links by owner userId.
+     */
+    public List<Link> findByUserId(String userId) {
+        if (userId == null) {
+            return findAll();
+        }
+
+        if (firestore == null) {
+            return memoryStore.values().stream()
+                    .filter(l -> userId.equals(l.userId()))
+                    .sorted((a, b) -> b.createdAt().compareTo(a.createdAt()))
+                    .collect(Collectors.toList());
+        }
+
+        try {
+            QuerySnapshot snapshot = firestore.collection(COLLECTION)
+                    .whereEqualTo("userId", userId)
+                    .get()
+                    .get();
+
+            List<Link> list = snapshot.getDocuments().stream()
+                    .map(this::toLink)
+                    .sorted((a, b) -> b.createdAt().compareTo(a.createdAt()))
+                    .collect(Collectors.toList());
+
+            list.forEach(l -> memoryStore.put(l.shortCode(), l));
+            return list;
+        } catch (Exception e) {
+            return memoryStore.values().stream()
+                    .filter(l -> userId.equals(l.userId()))
+                    .sorted((a, b) -> b.createdAt().compareTo(a.createdAt()))
+                    .collect(Collectors.toList());
         }
     }
 
@@ -109,6 +169,9 @@ public class LinkRepository {
      * Delete a link by its short code.
      */
     public boolean delete(String shortCode) {
+        memoryStore.remove(shortCode);
+        if (firestore == null) return true;
+
         try {
             DocumentReference docRef = firestore.collection(COLLECTION).document(shortCode);
             DocumentSnapshot snapshot = docRef.get().get();
@@ -129,6 +192,21 @@ public class LinkRepository {
      * Atomically increment totalClicks and update lastClickedAt inside a transaction.
      */
     public void recordClick(String shortCode, Instant clickedAt) {
+        Link cached = memoryStore.get(shortCode);
+        if (cached != null) {
+            memoryStore.put(shortCode, new Link(
+                    cached.shortCode(),
+                    cached.originalUrl(),
+                    cached.totalClicks() + 1,
+                    cached.createdAt(),
+                    cached.expiresAt(),
+                    clickedAt,
+                    cached.userId()
+            ));
+        }
+
+        if (firestore == null) return;
+
         DocumentReference docRef = firestore.collection(COLLECTION).document(shortCode);
         try {
             ApiFuture<Void> txFuture = firestore.runTransaction(transaction -> {
@@ -163,7 +241,8 @@ public class LinkRepository {
                 Objects.requireNonNullElse(doc.getLong("totalClicks"), 0L),
                 createdTs != null ? Instant.ofEpochSecond(createdTs.getSeconds(), createdTs.getNanos()) : Instant.now(),
                 expiresTs != null ? Instant.ofEpochSecond(expiresTs.getSeconds(), expiresTs.getNanos()) : null,
-                lastClickedTs != null ? Instant.ofEpochSecond(lastClickedTs.getSeconds(), lastClickedTs.getNanos()) : null
+                lastClickedTs != null ? Instant.ofEpochSecond(lastClickedTs.getSeconds(), lastClickedTs.getNanos()) : null,
+                doc.getString("userId")
         );
     }
 }

@@ -203,6 +203,8 @@ class LinkServiceTest {
 
         @Test
         void deleteLink_callsRepoAndCache() {
+            Link link = new Link("abc", "https://example.com", 0, Instant.now(), null, null);
+            when(linkRepository.findByShortCode("abc")).thenReturn(Optional.of(link));
             when(linkRepository.delete("abc")).thenReturn(true);
             linkService.deleteLink("abc");
             verify(cacheService).evict("abc");

@@ -48,6 +48,12 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse("CODE_CONFLICT", ex.getMessage()));
     }
 
+    @ExceptionHandler(AuthException.class)
+    public ResponseEntity<ErrorResponse> handleAuth(AuthException ex) {
+        return ResponseEntity.status(ex.getStatus())
+                .body(new ErrorResponse(ex.getErrorCode(), ex.getMessage()));
+    }
+
     @ExceptionHandler(CodeGenerationException.class)
     public ResponseEntity<ErrorResponse> handleCodeGeneration(CodeGenerationException ex) {
         log.error("Code generation failed", ex);

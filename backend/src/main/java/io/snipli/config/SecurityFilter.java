@@ -1,5 +1,7 @@
 package io.snipli.config;
 
+import io.jsonwebtoken.Claims;
+import io.snipli.service.JwtTokenService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,9 +18,11 @@ import java.time.Instant;
 public class SecurityFilter extends OncePerRequestFilter {
 
     private final SnipliProperties properties;
+    private final JwtTokenService jwtTokenService;
 
-    public SecurityFilter(SnipliProperties properties) {
+    public SecurityFilter(SnipliProperties properties, JwtTokenService jwtTokenService) {
         this.properties = properties;
+        this.jwtTokenService = jwtTokenService;
     }
 
     @Override
@@ -26,7 +30,7 @@ public class SecurityFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
-        // Always allow CORS preflight requests
+        // 1. Always allow CORS preflight requests
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
             filterChain.doFilter(request, response);
             return;
@@ -34,24 +38,57 @@ public class SecurityFilter extends OncePerRequestFilter {
 
         String path = request.getRequestURI();
 
-        // Protect /api/** endpoints with API key
-        if (path.startsWith("/api/")) {
-            String apiKey = request.getHeader("X-Api-Key");
-            String configuredApiKey = properties.getApiKey();
+        // 2. Allow public endpoints (Auth endpoints, health actuator, redirect paths)
+        if (path.startsWith("/api/v1/auth/") ||
+            path.startsWith("/actuator") ||
+            path.startsWith("/api/v1/tasks/") ||
+            !path.startsWith("/api/")) {
 
-            // If API key is configured, enforce it
-            if (configuredApiKey != null && !configuredApiKey.isBlank()) {
-                if (apiKey == null || !apiKey.equals(configuredApiKey)) {
-                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    response.setContentType("application/json");
-                    response.getWriter().write("""
-                            {"error":"UNAUTHORIZED","message":"Missing or invalid API key","timestamp":"%s"}
-                            """.formatted(Instant.now().toString()));
-                    return;
-                }
-            }
+            // Still check for optional JWT token on public endpoints (e.g. /me or create with token)
+            extractAndAttachUser(request);
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        // 3. Extract and validate JWT Token if present
+        boolean hasValidJwt = extractAndAttachUser(request);
+
+        // 4. Check API Key fallback
+        String apiKey = request.getHeader("X-Api-Key");
+        String configuredApiKey = properties.getApiKey();
+        boolean hasValidApiKey = (configuredApiKey != null && !configuredApiKey.isBlank() && configuredApiKey.equals(apiKey));
+
+        // If neither JWT nor valid API Key is provided when configured, enforce authentication on protected endpoints
+        if (configuredApiKey != null && !configuredApiKey.isBlank() && !hasValidApiKey && !hasValidJwt) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.getWriter().write("""
+                    {"error":"UNAUTHORIZED","message":"Missing or invalid JWT token or API key","timestamp":"%s"}
+                    """.formatted(Instant.now().toString()));
+            return;
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private boolean extractAndAttachUser(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7).trim();
+            try {
+                Claims claims = jwtTokenService.validateToken(token);
+                String userId = claims.get("userId", String.class);
+                String email = claims.getSubject();
+                String workspace = claims.get("workspace", String.class);
+
+                request.setAttribute("authenticatedUserId", userId);
+                request.setAttribute("authenticatedUserEmail", email);
+                request.setAttribute("authenticatedUserWorkspace", workspace);
+                return true;
+            } catch (Exception ignored) {
+                // Invalid or expired token
+            }
+        }
+        return false;
     }
 }

@@ -2,7 +2,7 @@ package io.snipli.exception;
 
 public sealed class SnipliException extends RuntimeException
         permits UrlValidationException, LinkNotFoundException, LinkExpiredException,
-                CodeConflictException, CodeGenerationException {
+                CodeConflictException, CodeGenerationException, AuthException {
 
     public SnipliException(String message) {
         super(message);

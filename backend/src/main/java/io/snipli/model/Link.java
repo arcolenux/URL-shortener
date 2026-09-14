@@ -9,8 +9,13 @@ public record Link(
         long totalClicks,
         Instant createdAt,
         Instant expiresAt,
-        Instant lastClickedAt
+        Instant lastClickedAt,
+        String userId
 ) {
+    public Link(String shortCode, String originalUrl, long totalClicks, Instant createdAt, Instant expiresAt, Instant lastClickedAt) {
+        this(shortCode, originalUrl, totalClicks, createdAt, expiresAt, lastClickedAt, null);
+    }
+
     public boolean isExpired() {
         return expiresAt != null && Instant.now().isAfter(expiresAt);
     }

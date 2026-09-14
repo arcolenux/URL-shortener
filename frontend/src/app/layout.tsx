@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import { AuthProvider } from "@/lib/auth-context";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -38,9 +39,11 @@ export default function RootLayout({
       className={`${plusJakartaSans.variable} ${jetBrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans bg-canvas-bg text-text-charcoal selection:bg-blue-100 selection:text-blue-900">
-        <Header />
-        <main className="flex-1 w-full pt-16">{children}</main>
-        <Footer />
+        <AuthProvider>
+          <Header />
+          <main className="flex-1 w-full pt-16">{children}</main>
+          <Footer />
+        </AuthProvider>
       </body>
     </html>
   );

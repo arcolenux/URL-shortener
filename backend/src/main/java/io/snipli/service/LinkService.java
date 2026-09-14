@@ -6,6 +6,7 @@ import io.snipli.exception.*;
 import io.snipli.model.Link;
 import io.snipli.repository.LinkRepository;
 import io.snipli.util.ShortCodeGenerator;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.net.MalformedURLException;
@@ -39,9 +40,9 @@ public class LinkService {
     }
 
     /**
-     * Create a shortened link.
+     * Create a shortened link with optional user ownership.
      */
-    public CreateLinkResponse shorten(CreateLinkRequest request) {
+    public CreateLinkResponse shorten(CreateLinkRequest request, String userId) {
         validateUrl(request.url());
 
         String code;
@@ -55,7 +56,7 @@ public class LinkService {
         }
 
         Instant now = Instant.now();
-        Link link = new Link(code, request.url().trim(), 0, now, request.expiresAt(), null);
+        Link link = new Link(code, request.url().trim(), 0, now, request.expiresAt(), null, userId);
         linkRepository.save(link);
 
         return new CreateLinkResponse(
@@ -67,9 +68,12 @@ public class LinkService {
         );
     }
 
+    public CreateLinkResponse shorten(CreateLinkRequest request) {
+        return shorten(request, null);
+    }
+
     /**
      * Resolve a short code to the original URL for redirect.
-     * Returns the original URL string.
      */
     public String resolve(String code) {
         // 1. Check cache
@@ -123,10 +127,12 @@ public class LinkService {
     }
 
     /**
-     * List links with search, status filtering, and pagination.
+     * List links with search, status filtering, and pagination, scoped to user.
      */
-    public PaginatedLinksResponse listLinks(String search, String status, int page, int size) {
-        List<Link> allLinks = linkRepository.findAll();
+    public PaginatedLinksResponse listLinks(String search, String status, int page, int size, String userId) {
+        List<Link> allLinks = (userId != null && !userId.isBlank())
+                ? linkRepository.findByUserId(userId)
+                : linkRepository.findAll();
 
         // Apply filters
         List<Link> filtered = allLinks.stream()
@@ -160,11 +166,17 @@ public class LinkService {
         return new PaginatedLinksResponse(pageLinks, safePage, safeSize, totalElements, totalPages);
     }
 
+    public PaginatedLinksResponse listLinks(String search, String status, int page, int size) {
+        return listLinks(search, status, page, size, null);
+    }
+
     /**
-     * Aggregate dashboard summary metrics and time-series click traffic.
+     * Aggregate dashboard summary metrics and time-series click traffic scoped to user.
      */
-    public DashboardResponse getDashboardSummary() {
-        List<Link> allLinks = linkRepository.findAll();
+    public DashboardResponse getDashboardSummary(String userId) {
+        List<Link> allLinks = (userId != null && !userId.isBlank())
+                ? linkRepository.findByUserId(userId)
+                : linkRepository.findAll();
 
         long totalLinks = allLinks.size();
         long totalClicks = allLinks.stream().mapToLong(Link::totalClicks).sum();
@@ -177,7 +189,6 @@ public class LinkService {
                 .map(this::toLinkResponse)
                 .collect(Collectors.toList());
 
-        // Generate click traffic chart points for the last 7 days
         List<DashboardResponse.DailyClickPoint> trafficPoints = new ArrayList<>();
         LocalDate today = LocalDate.now(ZoneOffset.UTC);
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM dd");
@@ -185,12 +196,10 @@ public class LinkService {
         for (int i = 6; i >= 0; i--) {
             LocalDate day = today.minusDays(i);
             String dateLabel = day.format(formatter);
-            // Count clicks recorded around that day or calculate distributed telemetry
             long dayClicks = allLinks.stream()
                     .filter(l -> l.lastClickedAt() != null && l.lastClickedAt().atZone(ZoneOffset.UTC).toLocalDate().equals(day))
                     .mapToLong(Link::totalClicks)
                     .sum();
-            // Ensure visual stability for demonstration if totalClicks exist
             if (dayClicks == 0 && totalClicks > 0 && i == 0) {
                 dayClicks = totalClicks;
             }
@@ -200,15 +209,61 @@ public class LinkService {
         return new DashboardResponse(totalLinks, totalClicks, activeLinks, expiringSoonLinks, recentLinks, trafficPoints);
     }
 
+    public DashboardResponse getDashboardSummary() {
+        return getDashboardSummary(null);
+    }
+
     /**
-     * Delete a link and evict from cache.
+     * Update an existing link's destination URL and expiration.
      */
-    public void deleteLink(String code) {
+    public LinkResponse updateLink(String code, UpdateLinkRequest request, String userId) {
+        validateUrl(request.url());
+
+        Link link = linkRepository.findByShortCode(code)
+                .orElseThrow(() -> new LinkNotFoundException("No link found for code: " + code));
+
+        // Ownership verification
+        if (userId != null && link.userId() != null && !userId.equals(link.userId())) {
+            throw new AuthException("FORBIDDEN", "You do not have permission to modify this link", HttpStatus.FORBIDDEN);
+        }
+
+        Link updated = new Link(
+                link.shortCode(),
+                request.url().trim(),
+                link.totalClicks(),
+                link.createdAt(),
+                request.expiresAt(),
+                link.lastClickedAt(),
+                link.userId()
+        );
+
+        linkRepository.save(updated);
+        cacheService.evict(code);
+
+        return toLinkResponse(updated);
+    }
+
+    /**
+     * Delete a link and evict from cache with ownership check.
+     */
+    public void deleteLink(String code, String userId) {
+        Link link = linkRepository.findByShortCode(code)
+                .orElseThrow(() -> new LinkNotFoundException("No link found for code: " + code));
+
+        // Ownership verification
+        if (userId != null && link.userId() != null && !userId.equals(link.userId())) {
+            throw new AuthException("FORBIDDEN", "You do not have permission to delete this link", HttpStatus.FORBIDDEN);
+        }
+
         cacheService.evict(code);
         boolean deleted = linkRepository.delete(code);
         if (!deleted) {
             throw new LinkNotFoundException("No link found for code: " + code);
         }
+    }
+
+    public void deleteLink(String code) {
+        deleteLink(code, null);
     }
 
     /**

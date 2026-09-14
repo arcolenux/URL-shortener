@@ -16,7 +16,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -43,7 +43,7 @@ class ControllerTest {
         CreateLinkResponse resp = new CreateLinkResponse(
                 "abc1234", "https://snipli.io/abc1234",
                 "https://example.com", null, now);
-        when(linkService.shorten(any())).thenReturn(resp);
+        when(linkService.shorten(any(), any())).thenReturn(resp);
 
         mockMvc.perform(post("/api/v1/links")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -90,7 +90,7 @@ class ControllerTest {
         LinkResponse link = new LinkResponse("abc1234", "https://snipli.io/abc1234", "https://example.com", 10, now, null, null, "ACTIVE");
         PaginatedLinksResponse paginated = new PaginatedLinksResponse(List.of(link), 0, 10, 1, 1);
 
-        when(linkService.listLinks(any(), any(), anyInt(), anyInt())).thenReturn(paginated);
+        when(linkService.listLinks(any(), any(), anyInt(), anyInt(), any())).thenReturn(paginated);
 
         mockMvc.perform(get("/api/v1/links?search=example&status=active&page=0&size=10"))
                 .andExpect(status().isOk())
@@ -101,7 +101,7 @@ class ControllerTest {
     @Test
     void getDashboard_returns200() throws Exception {
         DashboardResponse dashboard = new DashboardResponse(10, 500, 9, 1, List.of(), List.of());
-        when(linkService.getDashboardSummary()).thenReturn(dashboard);
+        when(linkService.getDashboardSummary(any())).thenReturn(dashboard);
 
         mockMvc.perform(get("/api/v1/links/dashboard"))
                 .andExpect(status().isOk())
@@ -111,7 +111,7 @@ class ControllerTest {
 
     @Test
     void deleteLink_returns204() throws Exception {
-        doNothing().when(linkService).deleteLink("abc1234");
+        doNothing().when(linkService).deleteLink(eq("abc1234"), any());
 
         mockMvc.perform(delete("/api/v1/links/abc1234"))
                 .andExpect(status().isNoContent());

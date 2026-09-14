@@ -9,6 +9,7 @@ public class SnipliProperties {
 
     private String baseUrl;
     private String apiKey;
+    private Jwt jwt = new Jwt();
     private Gcp gcp = new Gcp();
 
     public String getBaseUrl() {
@@ -27,12 +28,41 @@ public class SnipliProperties {
         this.apiKey = apiKey;
     }
 
+    public Jwt getJwt() {
+        return jwt;
+    }
+
+    public void setJwt(Jwt jwt) {
+        this.jwt = jwt;
+    }
+
     public Gcp getGcp() {
         return gcp;
     }
 
     public void setGcp(Gcp gcp) {
         this.gcp = gcp;
+    }
+
+    public static class Jwt {
+        private String secret = "snipli-super-secure-jwt-signing-key-production-grade-256bit-min-length-required!";
+        private long expirationMs = 86400000L; // 24 hours
+
+        public String getSecret() {
+            return secret;
+        }
+
+        public void setSecret(String secret) {
+            this.secret = secret;
+        }
+
+        public long getExpirationMs() {
+            return expirationMs;
+        }
+
+        public void setExpirationMs(long expirationMs) {
+            this.expirationMs = expirationMs;
+        }
     }
 
     public static class Gcp {
