@@ -1,18 +1,23 @@
 snipli:
-  base-url: ${SNIPLI_BASE_URL:https://snipli.io}
-  api-key: ${SNIPLI_API_KEY}
+  base-url: ${SNIPLI_BASE_URL:http://localhost:8080}
+  api-key: ${SNIPLI_API_KEY:}
   gcp:
-    project-id: ${GCP_PROJECT_ID}
+    project-id: ${GCP_PROJECT_ID:}
+    credentials-path: ${GCP_CREDENTIALS_PATH:}
     cloud-tasks:
-      queue: snipli-click-queue
-      location: us-central1
-      handler-url: ${SNIPLI_TASKS_HANDLER_URL}
+      queue: ${GCP_CLOUD_TASKS_QUEUE:snipli-click-queue}
+      location: ${GCP_CLOUD_TASKS_LOCATION:us-central1}
+      handler-url: ${SNIPLI_TASKS_HANDLER_URL:http://localhost:8080/api/v1/analytics/process-click}
 
 spring:
   data:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      ssl:
+        enabled: ${REDIS_SSL:false}
+      client-type: lettuce
   jackson:
     serialization:
       write-dates-as-timestamps: false
@@ -20,3 +25,5 @@ spring:
 
 server:
   port: 8080
+
+

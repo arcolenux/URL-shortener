@@ -40,6 +40,8 @@ ehthumbs.db
 *.jks
 service-account*.json
 credentials*.json
+snipli-*.json
+*.json.key
 
 # ──────────────────────────────────────────────
 # Java / JVM
