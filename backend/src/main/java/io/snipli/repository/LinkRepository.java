@@ -7,11 +7,9 @@ import io.snipli.model.Link;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 @Repository
 @SuppressWarnings("null")
@@ -51,9 +49,12 @@ public class LinkRepository {
                 link.createdAt().getEpochSecond(), link.createdAt().getNano()));
         if (link.expiresAt() != null) {
             data.put("expiresAt", Timestamp.ofTimeSecondsAndNanos(
-                    link.expiresAt().getEpochSecond(), link.expiresAt().getNano()));
+                link.expiresAt().getEpochSecond(), link.expiresAt().getNano()));
         }
-        // lastClickedAt is null at creation time
+        if (link.lastClickedAt() != null) {
+            data.put("lastClickedAt", Timestamp.ofTimeSecondsAndNanos(
+                link.lastClickedAt().getEpochSecond(), link.lastClickedAt().getNano()));
+        }
 
         try {
             firestore.collection(COLLECTION).document(link.shortCode()).set(data).get();
@@ -80,6 +81,47 @@ public class LinkRepository {
             throw new RuntimeException("Interrupted while fetching link", e);
         } catch (ExecutionException e) {
             throw new RuntimeException("Failed to fetch link", e);
+        }
+    }
+
+    /**
+     * Fetch all links from Firestore.
+     */
+    public List<Link> findAll() {
+        try {
+            QuerySnapshot snapshot = firestore.collection(COLLECTION)
+                    .orderBy("createdAt", Query.Direction.DESCENDING)
+                    .get()
+                    .get();
+
+            return snapshot.getDocuments().stream()
+                    .map(this::toLink)
+                    .collect(Collectors.toList());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Interrupted while fetching all links", e);
+        } catch (ExecutionException e) {
+            throw new RuntimeException("Failed to fetch all links", e);
+        }
+    }
+
+    /**
+     * Delete a link by its short code.
+     */
+    public boolean delete(String shortCode) {
+        try {
+            DocumentReference docRef = firestore.collection(COLLECTION).document(shortCode);
+            DocumentSnapshot snapshot = docRef.get().get();
+            if (!snapshot.exists()) {
+                return false;
+            }
+            docRef.delete().get();
+            return true;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Interrupted while deleting link", e);
+        } catch (ExecutionException e) {
+            throw new RuntimeException("Failed to delete link", e);
         }
     }
 

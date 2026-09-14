@@ -43,13 +43,28 @@ public class CacheService {
             Duration ttl = MAX_TTL;
             if (expiresAt != null) {
                 Duration remaining = Duration.between(Instant.now(), expiresAt);
-                if (remaining.isPositive() && remaining.compareTo(MAX_TTL) < 0) {
+                if (remaining.isNegative() || remaining.isZero()) {
+                    // Do not cache already expired links
+                    return;
+                }
+                if (remaining.compareTo(MAX_TTL) < 0) {
                     ttl = remaining;
                 }
             }
             redisTemplate.opsForValue().set(KEY_PREFIX + shortCode, originalUrl, ttl);
         } catch (Exception e) {
             log.warn("Redis SET failed for code={}", shortCode, e);
+        }
+    }
+
+    /**
+     * Evict a cached URL from Redis.
+     */
+    public void evict(String shortCode) {
+        try {
+            redisTemplate.delete(KEY_PREFIX + shortCode);
+        } catch (Exception e) {
+            log.warn("Redis DELETE failed for code={}", shortCode, e);
         }
     }
 }

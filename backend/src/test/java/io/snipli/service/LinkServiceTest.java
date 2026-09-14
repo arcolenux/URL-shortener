@@ -1,9 +1,7 @@
 package io.snipli.service;
 
 import io.snipli.config.SnipliProperties;
-import io.snipli.dto.CreateLinkRequest;
-import io.snipli.dto.CreateLinkResponse;
-import io.snipli.dto.LinkStatsResponse;
+import io.snipli.dto.*;
 import io.snipli.exception.*;
 import io.snipli.model.Link;
 import io.snipli.repository.LinkRepository;
@@ -16,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -168,6 +167,46 @@ class LinkServiceTest {
         void notFound_throws404() {
             when(linkRepository.findByShortCode("missing")).thenReturn(Optional.empty());
             assertThrows(LinkNotFoundException.class, () -> linkService.getStats("missing"));
+        }
+    }
+
+    @Nested
+    class DashboardAndManagement {
+
+        @Test
+        void listLinks_filtersAndPaginates() {
+            Instant now = Instant.now();
+            Link link1 = new Link("abc", "https://example.com/one", 10, now, null, null);
+            Link link2 = new Link("xyz", "https://other.org/two", 5, now.minusSeconds(100), null, null);
+            when(linkRepository.findAll()).thenReturn(List.of(link1, link2));
+
+            PaginatedLinksResponse res = linkService.listLinks("example", "active", 0, 10);
+            assertEquals(1, res.totalElements());
+            assertEquals("abc", res.links().get(0).shortCode());
+        }
+
+        @Test
+        void getDashboardSummary_aggregatesCorrectly() {
+            Instant now = Instant.now();
+            Link link1 = new Link("abc", "https://example.com/one", 10, now, null, now);
+            Link link2 = new Link("xyz", "https://other.org/two", 5, now.minusSeconds(100), null, now);
+            when(linkRepository.findAll()).thenReturn(List.of(link1, link2));
+
+            DashboardResponse dashboard = linkService.getDashboardSummary();
+            assertEquals(2, dashboard.totalLinks());
+            assertEquals(15, dashboard.totalClicks());
+            assertEquals(2, dashboard.activeLinks());
+            assertEquals(0, dashboard.expiringSoonLinks());
+            assertEquals(2, dashboard.recentLinks().size());
+            assertEquals(7, dashboard.clickTraffic().size());
+        }
+
+        @Test
+        void deleteLink_callsRepoAndCache() {
+            when(linkRepository.delete("abc")).thenReturn(true);
+            linkService.deleteLink("abc");
+            verify(cacheService).evict("abc");
+            verify(linkRepository).delete("abc");
         }
     }
 }
