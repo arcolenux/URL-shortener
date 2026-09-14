@@ -11,19 +11,17 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.time.Instant;
 
 @Component
 @Order(1)
 public class SecurityFilter extends OncePerRequestFilter {
 
-    private final SnipliProperties properties;
     private final JwtTokenService jwtTokenService;
 
-    public SecurityFilter(SnipliProperties properties, JwtTokenService jwtTokenService) {
-        this.properties = properties;
+    public SecurityFilter(JwtTokenService jwtTokenService) {
         this.jwtTokenService = jwtTokenService;
     }
+
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,

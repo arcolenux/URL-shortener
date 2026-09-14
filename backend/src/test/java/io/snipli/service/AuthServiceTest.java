@@ -5,13 +5,12 @@ import io.snipli.dto.AuthRequest;
 import io.snipli.dto.AuthResponse;
 import io.snipli.dto.RegisterRequest;
 import io.snipli.exception.AuthException;
-import io.snipli.exception.SnipliException;
 import io.snipli.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 import static org.junit.jupiter.api.Assertions.*;
+
 
 class AuthServiceTest {
 

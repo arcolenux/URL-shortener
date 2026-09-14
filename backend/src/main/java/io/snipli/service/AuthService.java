@@ -2,8 +2,8 @@ package io.snipli.service;
 
 import io.snipli.dto.*;
 import io.snipli.exception.AuthException;
-import io.snipli.exception.SnipliException;
 import io.snipli.model.User;
+
 import io.snipli.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
