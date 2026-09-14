@@ -209,15 +209,15 @@ export default function Header() {
               <div className="flex items-center gap-2">
                 <Link
                   href="/login"
-                  className="px-3 py-1.5 text-xs font-semibold text-text-charcoal hover:bg-canvas-bg rounded-lg transition-colors"
+                  className="px-3.5 py-1.5 text-xs font-semibold text-text-charcoal bg-surface-card border border-border-subtle hover:border-slate-400 hover:bg-slate-50 rounded-lg transition-all active:scale-[0.98] shadow-2xs"
                 >
                   Sign In
                 </Link>
                 <Link
                   href="/signup"
-                  className="px-3.5 py-1.5 text-xs font-semibold bg-primary-container hover:bg-blue-700 text-white rounded-lg transition-all shadow-xs"
+                  className="px-3.5 py-1.5 text-xs font-semibold bg-primary-container hover:bg-blue-700 text-white rounded-lg transition-all active:scale-[0.98] shadow-sm"
                 >
-                  Sign Up
+                  Sign Up Free
                 </Link>
               </div>
             )}
