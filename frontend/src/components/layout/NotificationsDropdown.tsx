@@ -12,40 +12,8 @@ export interface NotificationItem {
   read: boolean;
 }
 
-const INITIAL_NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: "notif-1",
-    title: "Traffic Spike Alert",
-    message: "Your most recent link reached 1,420 total clicks (+45% today).",
-    time: "10m ago",
-    type: "trend",
-    read: false,
-  },
-  {
-    id: "notif-2",
-    title: "Expiration Warning",
-    message: "One of your links is set to expire in 3 days.",
-    time: "2h ago",
-    type: "warning",
-    read: false,
-  },
-  {
-    id: "notif-3",
-    title: "New Feature Available",
-    message: "High-resolution SVG & PNG QR code export is now enabled for all links.",
-    time: "1d ago",
-    type: "feature",
-    read: true,
-  },
-  {
-    id: "notif-4",
-    title: "Cloud Tasks Queue Healthy",
-    message: "10,000 asynchronous click events processed with zero lag.",
-    time: "2d ago",
-    type: "system",
-    read: true,
-  },
-];
+const INITIAL_NOTIFICATIONS: NotificationItem[] = [];
+
 
 // Singleton store so Header badge and dropdown share the same state
 let _globalNotifications: NotificationItem[] = [...INITIAL_NOTIFICATIONS];

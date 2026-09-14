@@ -1,5 +1,8 @@
-import React from "react";
+"use client";
+
+import React, { useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Zap,
   ShieldCheck,
@@ -10,8 +13,21 @@ import {
   Clock,
   QrCode,
 } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
 
 export default function HomePage() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
+
+  // Signed-in users go directly to dashboard
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.replace("/dashboard");
+    }
+  }, [isLoading, isAuthenticated, router]);
+
+  if (isLoading || isAuthenticated) return null;
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-20">
       {/* Ambient glow */}
@@ -50,7 +66,6 @@ export default function HomePage() {
           </Link>
         </div>
 
-        {/* Social proof strip */}
         <p className="text-xs text-text-muted mt-1">
           No credit card required · Free account · Cancel anytime
         </p>
