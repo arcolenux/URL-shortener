@@ -12,9 +12,9 @@ RUN gradle bootJar --no-daemon -x test
 # ==================================
 # Stage 2: Runtime
 # ==================================
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:21-jre-jammy
 
-RUN addgroup -S snipli && adduser -S snipli -G snipli -u 1001
+RUN groupadd -r snipli && useradd -r -g snipli -u 1001 snipli
 
 WORKDIR /app
 COPY --from=builder /app/build/libs/*.jar app.jar
@@ -27,3 +27,4 @@ EXPOSE 8080
 ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
 
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+
