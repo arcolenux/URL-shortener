@@ -39,14 +39,14 @@ export default function HomePage() {
             href="/signup"
             className="inline-flex items-center gap-2 px-6 py-3 bg-primary-container hover:bg-blue-700 text-white text-sm font-bold rounded-xl shadow-md transition-all active:scale-[0.98]"
           >
-            <span>Get Started Free</span>
+            <span>Get Started</span>
             <ArrowRight className="w-4 h-4" />
           </Link>
           <Link
             href="/login"
             className="inline-flex items-center gap-2 px-6 py-3 bg-surface-card border border-border-subtle hover:border-slate-400 hover:bg-slate-50 text-text-charcoal text-sm font-semibold rounded-xl transition-all active:scale-[0.98] shadow-2xs"
           >
-            Sign In to Dashboard
+            Sign In
           </Link>
         </div>
 

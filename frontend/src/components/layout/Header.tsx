@@ -212,18 +212,26 @@ export default function Header() {
               </>
             ) : (
               /* Unauthenticated — Sign In / Sign Up only */
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 p-1 bg-canvas-bg border border-border-subtle rounded-xl shadow-2xs">
                 <Link
                   href="/login"
-                  className="px-3.5 py-1.5 text-xs font-semibold text-text-charcoal bg-surface-card border border-border-subtle hover:border-slate-400 hover:bg-slate-50 rounded-lg transition-all active:scale-[0.98] shadow-2xs"
+                  className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all active:scale-[0.97] ${
+                    pathname === "/login"
+                      ? "bg-primary-container text-white shadow-sm"
+                      : "text-text-charcoal hover:bg-white hover:shadow-2xs"
+                  }`}
                 >
                   Sign In
                 </Link>
                 <Link
                   href="/signup"
-                  className="px-3.5 py-1.5 text-xs font-semibold bg-primary-container hover:bg-blue-700 text-white rounded-lg transition-all active:scale-[0.98] shadow-sm"
+                  className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all active:scale-[0.97] ${
+                    pathname === "/signup"
+                      ? "bg-primary-container text-white shadow-sm"
+                      : "text-text-charcoal hover:bg-white hover:shadow-2xs"
+                  }`}
                 >
-                  Sign Up Free
+                  Sign Up
                 </Link>
               </div>
             )}
@@ -280,16 +288,24 @@ export default function Header() {
             <Link
               href="/login"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center px-3 py-2 text-sm font-medium text-text-charcoal hover:bg-canvas-bg rounded-lg transition-colors"
+              className={`flex items-center px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${
+                pathname === "/login"
+                  ? "text-primary-container bg-blue-50"
+                  : "text-text-charcoal hover:bg-canvas-bg"
+              }`}
             >
               Sign In
             </Link>
             <Link
               href="/signup"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center px-3 py-2 text-sm font-semibold text-primary-container hover:bg-blue-50 rounded-lg transition-colors"
+              className={`flex items-center px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${
+                pathname === "/signup"
+                  ? "text-primary-container bg-blue-50"
+                  : "text-text-charcoal hover:bg-canvas-bg"
+              }`}
             >
-              Sign Up Free
+              Sign Up
             </Link>
           </div>
         )}
